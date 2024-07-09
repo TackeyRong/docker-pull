@@ -39,8 +39,9 @@ jobs:
       - name: 读取镜像列表文件
         id: read_images
         run: |
-          images=$(cat ${{ github.event.inputs.IMAGES_FILE }})
-          echo "::set-output name=images::$images"
+          images=$(cat ${{ github.event.inputs.IMAGES_FILE }} | tr '\n' ' ')
+          echo "Images: $images"
+          echo "images=$images" >> $GITHUB_ENV
 
       - name: 登录到 Docker 仓库
         id: login
@@ -58,8 +59,7 @@ jobs:
       - name: 拉取、标记并推送 Docker 镜像
         id: pull_tag_push
         run: |
-          images="${{ steps.read_images.outputs.images }}"
-          for image in ${images}; do
+          for image in ${{ env.images }}; do
 
             original_image=$(echo $image | cut -d':' -f1)
             tag=$(echo $image | cut -d':' -f2)
