@@ -60,17 +60,13 @@ jobs:
         id: pull_tag_push
         run: |
           for image in ${{ env.images }}; do
-            echo "Processing image: $image"
 
             original_image=$(echo $image | cut -d':' -f1)
             tag=$(echo $image | cut -d':' -f2)
-            echo "Original image: $original_image, Tag: $tag"
 
             base_image=$(basename $original_image)
-            echo "Base image: $base_image"
 
             new_image="${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/$base_image:$tag"
-            echo "New image: $new_image"
 
             docker pull --platform ${{ github.event.inputs.ARCH }} $original_image:$tag
             docker tag $original_image:$tag $new_image
