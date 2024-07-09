@@ -3,14 +3,10 @@ name: 拉取镜像推送
 on:
   workflow_dispatch:
     inputs:
-      IMAGE_NAME:
-        description: '原镜像名称:版本'
+      IMAGES_FILE:
+        description: '镜像列表文件路径'
         required: true
-        default: ''
-      NEW_NAME:
-        description: '同步后镜像名称:版本'
-        required: true
-        default: ''
+        default: 'images.txt'
       TARGET_REGISTRY:
         description: '仓库地址'
         required: true
@@ -18,7 +14,7 @@ on:
       TARGET_REPOSITORY:
         description: '空间名称'
         required: true
-        default: 'private-wen'
+        default: 'kubesphere_wen'
       ARCH:
         description: '系统架构'
         required: true
@@ -29,7 +25,7 @@ on:
           - arm64
           - arm/v7
           - arm/v6
-          - 386
+          - "386"
           - s390x
           - ppc64le
 
@@ -37,6 +33,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: 检出代码库
+        uses: actions/checkout@v2
+
+      - name: 读取镜像列表文件
+        id: read_images
+        run: |
+          images=$(cat ${{ github.event.inputs.IMAGES_FILE }})
+          echo "::set-output name=images::$images"
+
       - name: 登录到 Docker 仓库
         id: login
         run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} ${{ github.event.inputs.TARGET_REGISTRY }}
@@ -53,9 +58,16 @@ jobs:
       - name: 拉取、标记并推送 Docker 镜像
         id: pull_tag_push
         run: |
-          docker pull --platform ${{ github.event.inputs.ARCH }} ${{ github.event.inputs.IMAGE_NAME }}
-          docker tag ${{ github.event.inputs.IMAGE_NAME }} ${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/${{ github.event.inputs.NEW_NAME }}
-          docker push ${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/${{ github.event.inputs.NEW_NAME }}
+          images="${{ steps.read_images.outputs.images }}"
+          for image in ${images//,/ }; do
+            original_image=$(echo $image | cut -d':' -f1)
+            tag=$(echo $image | cut -d':' -f2)
+            base_image=$(basename $original_image)
+            new_image="${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/$base_image:$tag"
+            docker pull --platform ${{ github.event.inputs.ARCH }} $original_image:$tag
+            docker tag $original_image:$tag $new_image
+            docker push $new_image
+          done
         continue-on-error: true
 
       - name: 检查镜像推送成功
