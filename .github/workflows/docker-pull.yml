@@ -59,7 +59,7 @@ jobs:
         id: pull_tag_push
         run: |
           images="${{ steps.read_images.outputs.images }}"
-          for image in ${images//,/ }; do
+          for image in ${images}; do
             original_image=$(echo $image | cut -d':' -f1)
             tag=$(echo $image | cut -d':' -f2)
             base_image=$(basename $original_image)
