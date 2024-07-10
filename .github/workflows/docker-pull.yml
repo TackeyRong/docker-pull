@@ -3,10 +3,14 @@ name: 拉取镜像推送
 on:
   workflow_dispatch:
     inputs:
-      IMAGES_FILE:
-        description: '镜像列表文件路径'
+      IMAGE_NAME:
+        description: '原镜像名称:版本'
         required: true
-        default: 'images.txt'
+        default: 'mysql/mysql-server'
+      NEW_NAME:
+        description: '同步后镜像名称:版本'
+        required: true
+        default: 'mysql-server'
       TARGET_REGISTRY:
         description: '仓库地址'
         required: true
@@ -14,7 +18,7 @@ on:
       TARGET_REPOSITORY:
         description: '空间名称'
         required: true
-        default: 'kubesphere_wen'
+        default: 'private-wen'
       ARCH:
         description: '系统架构'
         required: true
@@ -25,7 +29,7 @@ on:
           - arm64
           - arm/v7
           - arm/v6
-          - "386"
+          - 386
           - s390x
           - ppc64le
 
@@ -33,16 +37,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 检出代码库
-        uses: actions/checkout@v2
-
-      - name: 读取镜像列表文件
-        id: read_images
-        run: |
-          images=$(cat ${{ github.event.inputs.IMAGES_FILE }} | tr '\n' ' ')
-          echo "Images: $images"
-          echo "images=$images" >> $GITHUB_ENV
-
       - name: 登录到 Docker 仓库
         id: login
         run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} ${{ github.event.inputs.TARGET_REGISTRY }}
@@ -59,24 +53,18 @@ jobs:
       - name: 拉取、标记并推送 Docker 镜像
         id: pull_tag_push
         run: |
-          for image in ${{ env.images }}; do
-
-            original_image=$(echo $image | cut -d':' -f1)
-            tag=$(echo $image | cut -d':' -f2)
-
-            base_image=$(basename $original_image)
-
-            new_image="${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/$base_image:$tag"
-
-            docker pull --platform ${{ github.event.inputs.ARCH }} $original_image:$tag
-            docker tag $original_image:$tag $new_image
-            docker push $new_image
-          done
+          docker pull --platform ${{ github.event.inputs.ARCH }} ${{ github.event.inputs.IMAGE_NAME }}
+          docker tag ${{ github.event.inputs.IMAGE_NAME }} ${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/${{ github.event.inputs.NEW_NAME }}
+          docker push ${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/${{ github.event.inputs.NEW_NAME }}
         continue-on-error: true
 
       - name: 检查镜像推送成功
         if: ${{ steps.pull_tag_push.outcome == 'success' }}
         run: echo "Docker 镜像推送成功"
+
+      - name: 检查镜像推送失败
+        if: ${{ steps.pull_tag_push.outcome != 'success' }}
+        run: echo "Docker 镜像推送失败"
 
       - name: 检查镜像推送失败
         if: ${{ steps.pull_tag_push.outcome != 'success' }}
