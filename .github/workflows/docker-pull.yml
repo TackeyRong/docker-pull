@@ -6,11 +6,11 @@ on:
       IMAGE_NAME:
         description: '原镜像名称:版本'
         required: true
-        default: 'mysql/mysql-server'
+        default: ''
       NEW_NAME:
         description: '同步后镜像名称:版本'
         required: true
-        default: 'mysql-server'
+        default: ''
       TARGET_REGISTRY:
         description: '仓库地址'
         required: true
@@ -29,7 +29,7 @@ on:
           - arm64
           - arm/v7
           - arm/v6
-          - 386
+          - "386"
           - s390x
           - ppc64le
 
