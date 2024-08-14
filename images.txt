@@ -1,4 +1,4 @@
-cskefu/contact-center:develop
-cskefu/activemq:5.14.3
-cskefu/mysql:5.7
-cskefu/redis:5.0.5
+jumpserver/chen:v4.0.2-ce
+jumpserver/koko:v4.0.2-ce
+jumpserver/lion:v4.0.2-ce
+jumpserver/web:v4.0.2-ce
