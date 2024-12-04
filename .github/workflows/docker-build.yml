@@ -1,0 +1,72 @@
+name: 构建基础镜像
+
+on:
+  workflow_dispatch:
+    inputs:
+      DOCKERFILE_PATH:
+        description: 'Dockerfile路径'
+        required: true
+        default: 'devops/scripts/docker-images/openjdk8/Dockerfile'
+      IMAGE_NAME:
+        description: '镜像名称'
+        required: true
+        default: 'openjdk'
+      IMAGE_TAG:
+        description: '镜像版本'
+        required: true
+        default: '8-jdk'
+      TARGET_REGISTRY:
+        description: '仓库地址'
+        required: true
+        default: 'registry.cn-guangzhou.aliyuncs.com'
+      TARGET_REPOSITORY:
+        description: '空间名称'
+        required: true
+        default: 'private-wen'
+      ARCH:
+        description: '系统架构'
+        required: true
+        default: 'linux/amd64'
+        type: choice
+        options:
+          - linux/amd64
+          - linux/arm64
+          - linux/arm/v7
+          - linux/arm/v6
+          - linux/386
+          - linux/s390x
+          - linux/ppc64le
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v2
+
+      - name: 设置 QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: 登录到 Docker 仓库
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ github.event.inputs.TARGET_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 构建并推送镜像
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ${{ github.event.inputs.DOCKERFILE_PATH }}
+          platforms: ${{ github.event.inputs.ARCH }}
+          push: true
+          tags: |
+            ${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/${{ github.event.inputs.IMAGE_NAME }}:${{ github.event.inputs.IMAGE_TAG }}
+
+      - name: 检查构建结果
+        run: |
+          echo "镜像构建完成：${{ github.event.inputs.TARGET_REGISTRY }}/${{ github.event.inputs.TARGET_REPOSITORY }}/${{ github.event.inputs.IMAGE_NAME }}:${{ github.event.inputs.IMAGE_TAG }}" 
