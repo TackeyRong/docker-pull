@@ -6,7 +6,7 @@ on:
       DOCKERFILE_PATH:
         description: 'Dockerfile路径'
         required: true
-        default: 'devops/scripts/docker-images/openjdk8/Dockerfile'
+        default: 'Dockerfile'
       IMAGE_NAME:
         description: '镜像名称'
         required: true
